@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div>
+    <textarea autofocus placeholder="输入区" id="input" name="decoder" cols="30" rows="10"></textarea>
+  </div>
+  <p>UTF-8-encoded：</p>
+  <div id="result" style="word-break: break-all;min-height: 100px;background: #f2f2f2;"></div>
+  <script>
+    function utf8Encoder(words) {
+      let map = {}; // 缓存
+      let encodedStr = ""; // 返回值
+
+      for (const word of words) {
+        const codePointDecimal = word.codePointAt(); // 取得码点
+
+        if (map[word]) {
+          encodedStr += map[word];
+          continue;
+        }
+
+        // 判断码点范围
+        let type; // 用于判断字节长度的变量
+        if (codePointDecimal <= +"0x007F") {
+          type = 1;
+        } else if (codePointDecimal >= +"0x0080" && codePointDecimal <= +"0x07FF") {
+          type = 2;
+        } else if (codePointDecimal >= +"0x0800" && codePointDecimal <= +"0xFFFF") {
+          type = 3;
+        } else if (
+          codePointDecimal >= +"0x10000" &&
+          codePointDecimal <= +"0x10FFFF"
+        ) {
+          type = 4;
+        }
+
+        // 创建数组集合存储字节
+        let arrs = [];
+        for (let i = 0; i < type; i++) {
+          let arr = [];
+          if (i === 0) {
+            if (type === 1) {
+              arr.push("0");
+            } else {
+              arr.push("1".repeat(type) + "0");
+            }
+          } else {
+            arr.push("10");
+          }
+          arrs.push(arr);
+        }
+
+        // 获取码点的二进制表达
+        let binaryStr = Number(codePointDecimal).toString(2);
+
+        // 从后向前填入二进制字符串
+        for (let i = arrs.length - 1; i >= 0; i--) {
+          let arr = arrs[i]; // 当前字节数组
+          let gap = 8 - arr[0].length;
+          arr[0] = arr[0] + binaryStr.slice(-gap).padStart(gap, 0); // 每个数组补足八位，不足填 0
+          binaryStr = binaryStr.slice(0, binaryStr.length - gap);
+        }
+
+        // 每个字节转换为16进制后拼接
+        let encodedWord = arrs
+          .map((item) => {
+            return (
+              "\\x" +
+              Number("0b" + item[0])
+                .toString(16)
+                .toUpperCase()
+            );
+          })
+          .join("");
+
+        encodedStr += encodedWord;
+
+        if (!map[word]) {
+          map[word] = encodedWord;
+        }
+      }
+      return encodedStr;
+    }
+    document.querySelector("#input").addEventListener('keyup', function (event) {
+      let value = event.target.value
+      document.querySelector("#result").innerHTML = utf8Encoder(value)
+    })
+  </script>
+</body>
+
+</html>
